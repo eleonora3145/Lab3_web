@@ -1,8 +1,10 @@
 from flask import Flask, request, jsonify, session
 from flask_bcrypt import Bcrypt
 from flask_cors import CORS, cross_origin
-from models import db, User, Ticket, Movie,Session
+from models import db, User, Ticket, Movie, Screening
 from flask_migrate import Migrate
+from datetime import datetime
+
 app = Flask(__name__)
 
 app.config['SECRET_KEY'] = 'eleonora'
@@ -127,10 +129,26 @@ def useradd():
     db.session.commit()
     return jsonify({"message": "User added successfully"}), 201
 
+from flask import jsonify
+
+import logging
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
 @app.route('/sessions', methods=['GET'])
 def get_sessions():
-    sessions = Session.query.all()
-    return jsonify([{'id': session.id, 'movie_id': session.movie_id, 'start_time': session.start_time, 'end_time': session.end_time, 'price': str(session.price)} for session in sessions])
+    sessions = Screening.query.all()
+    return jsonify([
+        {
+            'id': session.id,
+            'movie_id': session.movie_id,
+            'start_time': session.start_time,
+            'end_time': session.start_time,
+            'price': str(session.price)
+        }
+        for session in sessions
+    ])
 
 @app.route('/movies/<movie_id>', methods=['GET'])
 def get_movie(movie_id):
@@ -139,8 +157,8 @@ def get_movie(movie_id):
 
 @app.route('/buy_ticket/<session_id>', methods=['POST'])
 def buy_ticket(session_id):
-    user_id = request.form.get('user_id')
-    seat_number = request.form.get('seat_number')
+    user_id = request.json['user_id']
+    seat_number = request.json['seat_number']
     ticket = Ticket(session_id=session_id, user_id=user_id, seat_number=seat_number)
     db.session.add(ticket)
     db.session.commit()
@@ -152,5 +170,6 @@ def return_ticket(ticket_id):
     db.session.delete(ticket)
     db.session.commit()
     return jsonify({'message': 'Ticket returned successfully'}), 200
+
 if __name__ == "__main__":
     app.run(debug=True)
